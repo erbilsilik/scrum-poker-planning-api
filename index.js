@@ -143,7 +143,6 @@ app.post('/vote-story', function (req, res) {
 });
 
 app.put('/sessions/:id/:storyId', function (req, res) {
-    // if (sessions[req.params.id] && sessions[req.params.storyId]) {
     var session = sessions[req.params.id];
     sessionId = req.params.id;
     storyId = req.params.storyId;
@@ -151,7 +150,7 @@ app.put('/sessions/:id/:storyId', function (req, res) {
     var finalScore = 0;
     var voterCount = 0;
 
-    for (var i = 0; i < sessions[sessionId].stories[storyId].cards; i++) {
+    for (var i = 0; i < sessions[sessionId].stories[storyId].cards.length; i++) {
         if (sessions[sessionId].stories[storyId].cards[i].count > finalScore) {
             voterCount += sessions[sessionId].stories[storyId].cards[i].count;
             finalScore = sessions[sessionId].stories[storyId].cards[i].number;
@@ -164,7 +163,6 @@ app.put('/sessions/:id/:storyId', function (req, res) {
     }
 
     res.json(true);
-    // }
 });
 
 app.listen(3000);
