@@ -84,7 +84,7 @@ app.post('/sessions', function (req, res) {
             }
         ];
 
-        return { name: item, cards, status: 'NOT COMPLETED', finalScore: 0 };
+        return { name: item, cards, status: 'Waiting', finalScore: 0 };
     });
     var numberOfVoters = req.body.numberOfVoters;
     var voterId = req.headers.authorization;
@@ -106,29 +106,43 @@ app.post('/sessions', function (req, res) {
 
 app.get('/sessions/:id', function (req, res) {
     var voterId = req.headers.authorization;
-    if (voterId) {
-        var session = sessions[req.params.id];
-        if (session && session.voters.includes(null)) {
-            if (!session.voters.includes(voterId) && session.voterId !== voterId) {
-                const nullIndex = session.voters.findIndex(item => item === null);
-                session.voters[nullIndex] = voterId;
-            }
-            res.json(session);
-        } 
-        
-        else if (session.voters.includes(voterId)) res.json(session);
-        
-        else new Error('All voters joined!');
+    if (!voterId) {
+       return;
+    }
+
+    var sessionId = req.params.id;
+    var session = sessions[sessionId];
+ 
+    var session = sessions[req.params.id];
+    
+    if (session && session.voters.includes(null) && !session.voters.includes(voterId)) {
+        const nullIndex = session.voters.findIndex(item => item === null);
+        session.voters[nullIndex] = voterId;
+    }
+
+    var highestCount = 0;
+
+    for (var i = 0; i < session.stories[session.activeStory].cards.length - 1; i++) {
+        if (session.stories[session.activeStory].cards[i].count > highestCount) {
+            highestCount = session.stories[session.activeStory].cards[i].count;
+            session.stories[session.activeStory].finalScore = session.stories[session.activeStory].cards[i].number; 
+        }
     }
     
-    else new Error('Not enabled in Incognito!');
+    return res.json(session);
+    
+    
 });
 
 app.post('/vote-story', function (req, res) {
+    var voterId = req.body.voterId || '96jxsok30ud5q3ve35yqst';
+    if (!voterId) {
+        return;
+    }
+    
     var session = sessions[req.body.sessionId];
     var cardId = req.body.cardId;
     var storyId = req.body.storyId;
-    var voterId = req.body.voterId;
 
     for (var i = 0; i < session.stories[storyId].cards.length; i++) {
         var isVotedBefore = false;
@@ -148,7 +162,7 @@ app.post('/vote-story', function (req, res) {
 
 app.put('/sessions/:id/', function (req, res) {
     var sessionId = req.params.id;
-    sessions[sessionId].activeStory = req.body.activeStory;
+    sessions[sessionId].storyIndex = req.body.storyIndex;
     var session = sessions[sessionId];
     
     res.json(session.stories[session.activeStory]);
@@ -156,24 +170,12 @@ app.put('/sessions/:id/', function (req, res) {
 
 app.put('/sessions/:id/:storyId', function (req, res) {
     var session = sessions[req.params.id];
-    sessionId = req.params.id;
-    storyId = req.params.storyId;
+    var sessionId = req.params.id;
+    var storyId = req.params.storyId;
 
-    var finalScore = 0;
-    var voterCount = 0;
-
-    for (var i = 0; i < sessions[sessionId].stories[storyId].cards.length; i++) {
-        if (sessions[sessionId].stories[storyId].cards[i].count > finalScore) {
-            voterCount += sessions[sessionId].stories[storyId].cards[i].count;
-            finalScore = sessions[sessionId].stories[storyId].cards[i].number;
-        }
-    }
-
-    if (voterCount == session.numberOfVoters) {
-        sessions[sessionId].stories[storyId].finalScore = finalScore;
-        sessions[sessionId].stories[storyId].status = 'VOTED';
-        sessions[sessionId].activeStory += 1;
-    }
+    session[sessionId].finalScore = req.body.finalScore;
+    sessions[sessionId].stories[storyId].status = 'VOTED';
+    sessions[sessionId].activeStory += 1;
 
     res.json(session);
 });
